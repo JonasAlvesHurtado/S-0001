@@ -1,0 +1,47 @@
+                      Varredura de rejeição de FTP
+Base para esse teste consiste em end localizados na koreia. Volto a resaltar por meio dessa palavra, que a analise foi feita no intuito de estudos.
+
+A ferramenta utilizada: Nmap. Devido ao amplo uso e funções aplicaveis.
+Esse recurso está pronto para abusos em muitos níveis, portanto, a maioria dos servidores deixou de suportá-lo.
+
+Nmap suporta FTP bounce scan com o -b opção
+Esta é uma boa maneira de contornar firewalls porque servidores FTP organizacionais 
+geralmente são colocados onde eles têm mais acesso a outros hosts internos do que qualquer host antigo da Internet.
+
+Servidor/IPs passiveis de vulnerabilida?
+Nmap scan report for mail1.futurere.com.kp (175.45.176.21)
+Host is up (0.39s latency).
+
+PORT   STATE    SERVICE
+20/tcp filtered ftp-data
+21/tcp filtered ftp
+
+Nmap scan report for 175.45.176.22
+Host is up (0.38s latency).
+
+PORT   STATE    SERVICE
+20/tcp filtered ftp-data
+21/tcp filtered ftp
+
+Nmap scan report for 175.45.176.71
+Host is up (0.38s latency).
+
+PORT   STATE    SERVICE
+20/tcp filtered ftp-data
+21/tcp filtered ftp
+
+Nmap scan report for 175.45.176.72
+Host is up (0.39s latency).
+
+PORT   STATE  SERVICE
+20/tcp closed ftp-data
+21/tcp closed ftp
+
+Nmap scan report for 175.45.176.80
+Host is up (0.38s latency).
+
+PORT   STATE    SERVICE
+20/tcp filtered ftp-data
+21/tcp filtered ftp
+
+

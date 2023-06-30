@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#Segmentação da topologia e serviços na rede.
+
+clear
+echo "**********************************************************************************"
+echo "Script feito para validação de Server Email"
+echo "-------------------------------------------"
+
+echo -n "Host  :"; read rede_host
+echo "-------------------------------------------"
+echo "Porta SMTP : 25,587, 465 ou 2525 | *Padrão*" 
+echo "-------------------------------------------"
+echo -n "Qual a porta : "; read porta_host
+echo "**********************************************************************************"
+
+echo "Em processo............................."
+nmap -p $porta_host -sS $rede_host | grep "Nmap scan report for mail."  # > list_serv_smtp.txt
+
+echo "Finalizado a validação de host SMTP"
+
+
+
+
+echo "**********************************************************************************"

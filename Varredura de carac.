@@ -1,0 +1,48 @@
+#!/bin/bash
+#Mostra a verção do apache rodando. Feito.
+
+clear 
+echo "***********************************************************************************************"
+
+#######################################
+
+echo "Versionamento do Apache"
+echo "-----------------------"
+echo -n "Host :"; read test_host
+echo "-----------------------"
+#######################################
+
+echo "<Processando>"
+nmap -p80,443 -A -sV -sS $test_host  | grep "Apache" 
+echo ""
+echo "Etapa 1 - Versão do apache"
+echo "-----------------------"
+echo "<Processando>"
+nmap -sS -A -p443  $test_host  | grep "Aggressive OS guesses:" 
+echo ""
+echo "Etapa 2 - possivel topologia da rede"
+echo "-----------------------"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+echo "***********************************************************************************************"

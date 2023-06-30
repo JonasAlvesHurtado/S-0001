@@ -1,0 +1,32 @@
+#!/bin/bash
+
+#Vai varrer as portas TCP/Ip abertas. Da port 0 - 1000
+clear
+echo "**********************************************************************************"
+echo "Validação de Port TCP e UDP"
+echo "-------------------------------------------"
+echo -n "Host :"; read host_alvo
+echo "------------------------"
+echo "Testando a Porta: 1-1000 TCP"
+echo "------------------------"
+#####################################################################
+
+nmap -p1-1000 -sS $host_alvo | grep "/tcp"
+nmap -p1 -sS $host_alvo | grep "MAC"
+
+#####################################################################
+echo ""
+echo ""
+echo ""
+#Vai varrer as portas UDP abertas. Da Porta 0 - 1000
+echo "------------------------"
+echo "Testando a Porta: 1-100 UDP"
+echo "------------------------"
+echo "Processo de Port Scan UDP é lento!"
+#####################################################################
+
+nmap -sU -p1-1000 -sS $host_alvo | grep "/udp open"
+nmap -p1 -sS $host_alvo | grep "MAC"
+
+#####################################################################
+echo "**********************************************************************************"

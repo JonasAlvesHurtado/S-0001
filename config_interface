@@ -1,0 +1,49 @@
+#!/bin/bash
+#Script feito para confgurar a interface de rede.
+
+
+clear
+echo "***********************************************************"
+echo ""
+echo "▬▬▬.◙.▬▬▬
+═▂▄▄▓▄▄▂
+◢◤ █▀🐒▀████▄▄▄▄◢◤
+█▄ █ー ███▀▀▀▀▀▀▀╬
+◥█████◤
+══╩══╩═
+Seu preguiçoso"
+echo ""
+
+#---------------------informativo
+echo "*******"
+ifconfig > ifconfig_orig.txt #Configuração original
+
+echo -n "Interface de rede>> "; awk '{print $1}' ifconfig_orig.txt | grep "0:"
+echo -n "Seu ip: "; hostname -I  #IP da maquina inicia
+echo -n "Netmask: "; awk '{print $4}' ifconfig_orig.txt | grep "255.255"
+echo -n "broadcast: "; awk '{print $6}' ifconfig_orig.txt | grep ".255"
+echo "*******"
+echo ""
+
+
+echo "-----------"
+echo -n "Quer configura a interface de rede?"; read -p " Confirme? ( S / N ) " prompt
+echo "-----------"
+if [[ $prompt == "s" || $prompt == "S" || $prompt == "Sim" || $prompt == "sim" ]]
+
+then
+  	echo -n "Informe o IP: "; read ip_informe
+  	echo -n "Informe o Netmask: "; read netmesk_info
+	echo -n "Informe a interface de rede: "; read interface_info
+	echo    "-----------------------------------"
+	echo    "Configurando a interface...."
+	ifconfig $interface_info $ip_informe netmask $netmesk_info up
+	echo    "interface configurada"
+else
+  exit
+fi
+
+
+
+echo ""
+echo "***********************************************************"

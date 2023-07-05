@@ -1,0 +1,26 @@
+#!/bin/bash
+#ecript volta a avaliar o consumo de memoria - beta.
+
+clear
+for (( ; ; ))
+do 
+	echo "**********************************************************************************"
+	
+	echo ""
+	echo "------------------"	
+	echo "Uso de Memoria Ram"
+	echo "------------------"
+	echo ""
+	free -h
+	echo ""
+	echo "------------------"	
+	echo "Uso do HD"
+	echo "------------------"
+	echo ""
+	df -h	
+	echo ""	
+	echo "**********************************************************************************"
+	time sleep 0.5 
+	clear
+
+done

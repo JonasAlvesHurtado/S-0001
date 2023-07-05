@@ -1,0 +1,105 @@
+#!/bin/bash
+# ---test de serviços na rede | vai compor devido ao tamanho.
+
+clear
+echo "*********************************************************************"
+echo ""
+
+echo "-----------------------"
+echo -n "Seu IP: "; hostname -I
+echo -n "Host: "; read host_analise 
+echo "-----------------------"
+echo ""
+#---------------------------------------
+
+a1=host_analise.txt #Arq da primeira analise
+a2=host_loop.txt #Arq da segunda analise
+a3=host_loop_noresponse.txt #Arq de host que não responden!
+port_servic=80,443 #porta de seviço da sua rede.
+time_loop=1.5 #tempo de atualização em segundos. Padão americano 
+
+#---------------------------------------
+
+echo -n "Host(respons): $host_analise |" ; read -p " Confirme? ( S / N ) " prompt
+echo "--------------------------------"
+if [[ $prompt == "s" || $prompt == "S" || $prompt == "Sim" || $prompt == "sim" ]]
+
+then 	
+	echo ""
+	nmap -p $port_servic  -sS $host_analise  -Pn -n |  grep "Nmap scan report for" | awk '{print $5}' > $a1					  
+  	echo "Resposta do Host: "
+	tail -l  $a1
+	echo ""
+else
+	echo ""
+fi
+
+#----vValidação positiva
+
+echo -n "Loop de validação: $host_analise |" ; read -p " Confirme? ( S / N ) " prompt
+echo "--------------------------------"
+if [[ $prompt == "s" || $prompt == "S" || $prompt == "Sim" || $prompt == "sim" ]]
+
+then #---------------------------------------------------------------------------------------------------------------------
+
+	for (( ; ; ))	
+	 do 
+		echo "--------------------------------"
+		nmap -iL $a1 -sS -Pn -n -p $port_servic |  grep "Nmap scan report for" | awk '{print $5}' > $a2					  
+  		echo "Host Ativos: "
+		tail -l  $a2
+		echo  "--------------------------------"
+		
+		time sleep $time_loop
+		clear
+	 done
+
+else #---------------------------------------------------------------------------------------------------------------------
+	echo ""
+fi
+
+<<INICIO
+
+#----Validação de Netiva | Demora muito
+
+echo -n "Loop de Host(no-respons): $host_analise |" ; read -p " Confirme? ( S / N ) " prompt
+echo "--------------------------------"
+if [[ $prompt == "s" || $prompt == "S" || $prompt == "Sim" || $prompt == "sim" ]]
+
+then #---------------------------------------------------------------------------------------------------------------------
+
+	for (( ; ; ))	
+	 do 
+		echo "--------------------------------"
+		echo "Host não respondem: "
+		nmap -iL $a1 -Pn |  grep "in ignored states" | awk '{print $6}' > $a3			  
+		tail -l  $a3
+		echo  "--------------------------------"
+		
+		time sleep $time_loop
+		clear
+	 done
+
+else #---------------------------------------------------------------------------------------------------------------------
+	echo ""
+fi
+INICIO
+
+
+
+
+echo "*********************************************************************"
+
+
+
+
+
+
+
+
+
+
+
+
+
+

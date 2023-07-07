@@ -1,0 +1,426 @@
+			Servidor de Logs
+--------------------------------------------------------------------------------
+
+O Servidor de Logs é um recurso bastante útil em uma rede onde necessitamos centralizar os 
+logs de todos os servidores, para analisá-los melhor. Uma outra vantagem está relacionada 
+à segurança da informação, porque um servidor invadido enviará logs para 
+um sistema remoto, dificultando que o invasor apague seus rastros. 
+
+Para que ele obtenha êxito em destruir esses dados, terá que invadir, também, o Servidor de Logs da sua rede. 
+Uma boa prática de se montar um sistema como esse, é também saber como organizar os dados recebidos dos 
+servidores e organizá-los de forma prática e de fácil acesso.
+
+Outra utilidade para esse sistema, seria para armazenar logs de uma caixa CGNAT BPA (Bulk Port Allocation). 
+Também para coletar logs IPv6 de sistemas que ainda não fazem isso 100% via Radius, por exemplo. 
+Bem, existem diversas ideias para se utilizar um Servidor de Logs.
+
+--------------------------------------------------------------------------------
+
+		Sistema e recursos que usaremos nesse Servidor
+
+
+	Debian 10 (Buster) - Sistema Operacional onde rodaremos os serviços.
+
+	Rsyslog - serviço responsável por enviar e coletar os logs dos servidores.
+
+	Logrotate - faz o rotacionamentos dos logs armazenados.
+
+	OpenNTPd - para mantermos a data e hora do sistema corretos. Isso é muito importante em se tratando de logs.
+
+	nftables - sucessor do Netfilter/IPTables onde criaremos os filtros de pacotes.
+
+	SSD ou HDD (o espaço vai depender da necessidade de cada rede). Prefiro usar SSD pela performance e se possível em RAID10 para ter mais disponibilidade, mas vai da preferência de cada sysadmin. Também podemos usar virtualização.
+
+	Processamento e memória não são requisitos altos.
+
+	IPv6 - Porque precisamos ter consciência de sua importância para continuidade da Internet. Então por que não usarmos ele em nossa implementação?
+
+
+
+Diagrama exemplo
+[arq: Diagrama exemplo.png ]
+
+
+--------------------------------------------------------------------------------
+
+		Acertando a data/hora do sistema:
+
+	# apt install openntpd
+
+*Alterar o /etc/openntpd/ntpd.conf comentando a configuração atual e adicionando o novo Pool (pool.ntp.br) conforme abaixo:
+
+# $OpenBSD: ntpd.conf,v 1.14 2015/07/15 20:28:37 ajacoutot Exp $
+# sample ntpd configuration file, see ntpd.conf(5)
+
+# Addresses to listen on (ntpd does not listen by default)
+#listen on *
+#listen on 127.0.0.1
+#listen on ::1
+
+# sync to a single server
+#server ntp.example.org
+
+# use a random selection of NTP Pool Time Servers
+# see http://support.ntp.org/bin/view/Servers/NTPPoolServers
+#servers pool.ntp.org
+servers pool.ntp.br
+
+# Choose servers announced from Debian NTP Pool
+#servers 0.debian.pool.ntp.org
+#servers 1.debian.pool.ntp.org
+#servers 2.debian.pool.ntp.org
+#servers 3.debian.pool.ntp.org
+
+# use a specific local timedelta sensor (radio clock, etc)
+#sensor nmea0
+
+# use all detected timedelta sensors
+#sensor *
+
+*Reiniciaremos o serviço e checaremos se a data e hora estão corretas:
+
+# systemctl restart openntpd.service
+
+# date
+sex abr 23 17:25:29 -03 2021
+
+*Caso o fuso horário do servidor esteja errado, pode usar o seguinte comando para corrigir: dpkg-reconfigure tzdata
+
+---------------------
+Uma observação importante: nunca esqueça de comparar o fuso horário, data e hora do log com a consulta que quer fazer.
+Se o fuso consultado for diferente, não esqueça de fazer o cálculo correto e corrigir a data e horário na consulta.
+
+Um exemplo: vamos supor que você receba por e-mail, um comunicado de incidente e no e-mail o log esteja assim com o seguinte formato.
+
+Date/timestamps (at the very left) are UTC.
+
+2019-06-07 13:45:29.627896 IP (tos 0x28, ttl 48, id 61179, offset 0, flags [DF], proto UDP (17), length 1052)
+    186.xxx.xxx.38.47833 > 192.223.24.x.20068: UDP, length 1024
+	0x0000:  4528 041c eefb 4000 3011 858e bac1 3e26  E(....@.0.....>&
+	0x0010:  c0df 1858 bad9 4e64 0408 4544 8ed2 9aa6  ...X..Nd..ED....
+	0x0020:  01b5 00f0 99ab 7444 200b 01ba 4cb0 7fca  ......tD....L...
+	0x0030:  bfbc 223f a1f0 ebde 57b8 016c 4b98 cb5b  .."?....W..lK..[
+	0x0040:  c910 2671 b488 c9f0 fa55 6b91 5c8e 6596  ..&q.....Uk.\.e.
+	0x0050:  0164
+
+
+Acima vemos que o fuso do log está em UTC. 
+Se o fuso horário dos seus logs for UTC -03 (América/São Paulo), então será necessário diminuir 3 horas desse log, ou seja, você 
+procurará por um log nesse período: 2019-06-07 10:45:29. 
+
+Não esqueça de checar se o período consultado não foi em alguma época, que ainda estava se usando horário de verão. 
+Nesse nosso exemplo seria UTC -02 e diminuiríamos 2 horas, ao invés de 3.
+
+---------------------
+
+
+------------------------------------------------------------------------------------
+
+		Configuração do Servidor
+
+Para a instalação do servidor, basta ter em mãos um pendrive com o instalador do Debian Buster. 
+Caso ainda não tenha, aqui vai um link que costumo usar. Esse link pode mudar conforme atualizações do sistema. 
+
+Não iremos entrar em detalhes sobre a instalação do Debian, só tenha em mente que você precisará instalar o mínimo 
+necessário e o servidor ssh para acessá-lo remotamente. Nada de ambientes gráficos!
+
+O sistema não deve ter nenhum serviço rodando além do cron, ntpd e o rsyslogd. 
+Desabilite e/ou remova qualquer serviço desnecessário. Isso melhora a segurança do seu sistema e uso de recursos.
+
+Agora partiremos para a configuração do Servidor de Logs em si. 
+Vamos definir a seguinte estratégia baseada no diagrama acima: temos 3 tipos de casos, como exemplo, servidores 
+comuns (serviços como http, smtp, dns, etc), caixas CGNAT e Mikrotiks fazendo, por exemplo, concentração PPPoE (BNG). 
+
+Baseado nessas informações, separaremos o armazenamento em diretórios distintos, facilitando a organização e manipulação dos dados armazenados.
+
+# mkdir -p /var/log/danos
+# mkdir -p /var/log/servidores
+# mkdir -p /var/log/mikrotiks
+
+No primeiro serão armazenados os logs referentes aos servidores de CGNAT DANOS. 
+No segundo logs de servidores comuns de Internet, por exemplo. 
+Por último os relacionados com os Mikrotiks.
+
+Precisamos habilitar o rsyslog para se tornar um servidor de logs; assim escutar em sua porta
+padrão 514/UDP ou outra porta que desejar e receber os dados. 
+Para isso removeremos o comentário "#" das duas linhas abaixo, do arquivo /etc/rsyslog.conf.
+
+	module(load="imudp")
+	input(type="imudp" port="514")
+
+Criaremos em /etc/rsyslog.d/ um arquivo chamado logserver.conf com o conteúdo abaixo. 
+Todos os arquivos .conf, que forem criados nesse diretório, o rsyslog lerá em usa inicialização.
+	
+	template (name="ServLinux" type="string" string="/var/log/servidores/%HOSTNAME%.log")
+	template (name="DANOS" type="string" string="/var/log/danos/%HOSTNAME%.log")
+	template (name="Mikrotiks" type="string" string="/var/log/mikrotiks/%HOSTNAME%.log")
+	:fromhost-ip, isequal, "2001:db8:face:b00c:192:168:10:25" ?ServLinux
+	:fromhost-ip, isequal, "2001:db8:c0ca:c01a:192:168:0:3" ?DANOS
+	:fromhost-ip, isequal, "2001:db8:dead::192:168:200:4" ?Mikrotiks
+
+A configuração é bem simples. 
+
+Se analisarmos, veremos que os templates definem onde serão armazenados os logs, cujos arquivos serão 
+criados de acordo com o hostname de cada um. 
+
+As linhas com fromhost-ip fazem o filtro por IP de servidor e enviam os logs para o template correto. 
+Nesse caso temos 3 templates: ServLinux, DANOS e Mikrotiks. 
+
+Bem simples não é mesmo? 
+Vamos reiniciar o serviço e checar seu status desse jeito:
+
+# systemctl restart rsyslog.service
+
+# systemctl status rsyslog.service 
+● rsyslog.service - System Logging Service
+   Loaded: loaded (/lib/systemd/system/rsyslog.service; enabled; vendor preset: enabled)
+   Active: active (running) since Fri 2021-04-23 13:51:25 -03; 4h 35min ago
+     Docs: man:rsyslogd(8)
+           https://www.rsyslog.com/doc/
+ Main PID: 19362 (rsyslogd)
+    Tasks: 5 (limit: 4915)
+   Memory: 18.7M
+   CGroup: /system.slice/rsyslog.service
+           └─19362 /usr/sbin/rsyslogd -n -iNONE
+
+
+--------------------------------------------------------------------------------
+
+		Definindo um rotacionamento dos Logs
+
+Outro ponto que é necessário se criar uma estratégia; ter em mente por quanto tempo se 
+quer manter os dados para depois descartá-los. 
+
+Para o nosso exemplo vamos definir que os logs do CGNAT devem ser guardados pelo prazo de 1 ano, o mesmo 
+para os logs do Mikrotik e 6 meses para os logs do servidor Linux do nosso exemplo.
+
+Vamos criar os seguintes arquivos em /etc/logrotate.d/:
+
+# cat danos 
+/var/log/danos/*.log {
+    daily
+    dateext
+    dateformat -%Y%m%d
+    compress
+    rotate 30
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+                /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+    lastaction
+                mkdir -p /var/log/danos/`date +%Y`/`date +%m`
+                cp /var/log/danos/*log-`date +%Y%m%d`.gz /var/log/danos/`date +%Y`/`date +%m`
+    endscript
+}
+
+# cat servidores 
+/var/log/servidores/*.log {
+    daily
+    dateext
+    dateformat -%Y%m%d
+    compress
+    rotate 30
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+                /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+    lastaction
+                mkdir -p /var/log/servidores/`date +%Y`/`date +%m`
+                cp /var/log/servidores/*log-`date +%Y%m%d`.gz /var/log/servidores/`date +%Y`/`date +%m`
+    endscript
+}
+
+# cat mikrotiks 
+/var/log/mikrotiks/*.log {
+    daily
+    dateext
+    dateformat -%Y%m%d
+    compress
+    rotate 30
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+                /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+    lastaction
+                mkdir -p /var/log/mikrotiks/`date +%Y`/`date +%m`
+                cp /var/log/mikrotiks/*log-`date +%Y%m%d`.gz /var/log/mikrotiks/`date +%Y`/`date +%m`
+    endscript
+}
+
+
+Teremos 3 arquivos definidos: danos, servidores e mikrotiks. 
+Cada um deles responsável pelo rotacionamento do seu diretório de logs. 
+Sua syntax pode ser consultada via man logrotate.conf. 
+
+Nos exemplos acima, os logs serão rotacionados diariamente gerando um arquivo com um sufixo indicando ano, mês e dia. 
+Na sequencia esse arquivo será copiado para um diretório referente ao ano, dentro do diretório do mês. 
+Assim teremos uma estrutura mais organiza. Todos os logs estarão compactados com gzip, ocupando muito menos espaço em disco.
+
+Reinicie o logrotate para que ele carregue as novas configurações.
+
+# systemctl restart logrotate.service
+
+Podemos testá-los se está tudo OK rodando o logrotate em modo debug assim:
+
+# logrotate --debug /etc/logrotate.d/danos
+# logrotate --debug /etc/logrotate.d/mikrotiks
+# logrotate --debug /etc/logrotate.d/servidores
+
+
+--------------------------------------------------------------------------------
+
+		Criando filtros para a proteção do Servidor de Logs
+
+Para não deixarmos nosso tão valioso servidor aberto para o mundo, adicionaremos algumas regras de firewall nele, permitindo 
+que apenas os servidores e sistemas autorizados possam enviar os logs para ele. 
+
+O exemplo abaixo é um script utilizando syntax do nftables e por isso vamos precisar instalar o programa nftables. 
+Pode ser feito com Netfilter/IPTables? Pode. Só seguir o mesmo raciocínio lógico.
+
+	# apt install nftables
+
+Abaixo o exemplo do script /root/frw.sh:
+
+
+#!/usr/sbin/nft -f
+flush ruleset
+
+define bogons_v4 = { 0.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.2.0/24, 192.168.0.0/16, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4 }
+define bogons_v6 = { ::/8, 0100::/64, 2001:2::/48, 2001:10::/28, 2001:db8::/32, 3ffe::/16, fc00::/7, fec0::/10, ff00::/8 }
+
+add table netdev filter
+add chain netdev filter ens192 { type filter hook ingress device ens192 priority 0; policy accept; }
+
+# bloco pra bloqueio de alguns pacotes indesejados
+add rule netdev filter ens192 tcp flags & (fin|syn|rst|psh|ack|urg) == 0x0 counter drop
+add rule netdev filter ens192 tcp flags & (fin|syn) == fin|syn counter drop
+add rule netdev filter ens192 tcp flags & (syn|rst) == syn|rst counter drop
+add rule netdev filter ens192 tcp flags & (fin|rst) == fin|rst counter drop
+add rule netdev filter ens192 tcp flags & (fin|ack) == fin counter drop
+add rule netdev filter ens192 tcp flags & (ack|urg) == urg counter drop
+add rule netdev filter ens192 tcp flags & (fin|ack) == fin counter drop
+add rule netdev filter ens192 tcp flags & (psh|ack) == psh counter drop
+add rule netdev filter ens192 tcp flags & (fin|syn|rst|psh|ack|urg) == fin|syn|rst|psh|ack|urg counter drop
+add rule netdev filter ens192 tcp flags & (fin|syn|rst|psh|ack|urg) == 0x0 counter drop
+add rule netdev filter ens192 tcp flags & (fin|syn|rst|psh|ack|urg) == fin|psh|urg counter drop
+add rule netdev filter ens192 tcp flags & (fin|syn|rst|psh|ack|urg) == fin|syn|psh|urg counter drop
+add rule netdev filter ens192 tcp flags & (fin|syn|rst|psh|ack|urg) == fin|syn|rst|ack|urg counter drop
+
+# bloqueio de bogons
+add rule netdev filter ens192 ip saddr $bogons_v4 counter drop
+add rule netdev filter ens192 ip6 saddr $bogons_v6 counter drop
+
+# liberacao de envio de logs dos servidores autorizados e na sequencia um bloqueio geral da porta 514/UDP
+add rule netdev filter ens192 ip6 saddr { 2001:db8:face:b00c:192:168:10:25, 2001:db8:c0ca:c01a:192:168:0:3, 2001:db8:dead::192:168:200:4 } udp dport 514 counter accept
+add rule netdev filter ens192 udp dport 514 counter drop
+
+
+O script acima utiliza a netdev do nftables para fazer bloqueios. 
+Ela é extremamente performática e bem mais eficiente que a table RAW do Netfilter/IPTables. 
+
+Você deve substituir a interface ens192 pela interface do seu servidor. 
+Os blocos estão bem separados e definimos duas variáveis bogons_v4 e bogons_v6 que dispensam comentários sobre suas finalidades. 
+
+Temos o bloco que bloqueia alguns tipos de pacotes indesejados, temos o bloco que bloqueia os bogons e o último bloco é 
+onde liberamos os servidores e equipamentos do nosso artigo, de enviarem seus logs. 
+
+Por último bloqueamos a porta 514/UDP. Não esqueça de fazer as duas últimas linhas também para o seu acesso ssh. 
+
+É claro que o script acima pode ser feito, perfeitamente, em iptables mas foi feito assim, para demonstrar um novo 
+jeito de se implementar firewall nas Distribuições Linux mais recentes.
+
+
+------------------------------------------------------------------------------------
+
+		Configurando o envio de log nos servidores e equipamentos do nosso exemplo
+	
+Estamos chegando quase no fim deste artigo. Agora serão mostrados exemplos de configuração para envio dos logs, para o Servidor de Logs. 
+Em teoria quase todo sistema gera logs e em muitos casos, podem ser enviados remotamente para um agregador de logs. 
+Aqui vamos ver 3 exemplos apenas, mas basta procurar como fazer no seu sistema, utilizando o recurso de envio de logs via servidor syslog.
+
+
+---Servidor Linux
+No servidor Linux (2001:db8:face:b00c:192:168:10:25), incluiremos a seguinte linha no final do arquivo /etc/rsyslog.conf. 
+Essa linha instrui o rsyslog, para enviar todos os logs para o Servidor de Logs. Bem simples.
+
+	*.* @[2001:db8:106::192:168:1:1]:514
+
+Reinicie o serviço rsyslogd e cheque seu status:
+
+# systemctl restart rsyslog.service
+# systemctl status rsyslog.service
+● rsyslog.service - System Logging Service
+   Loaded: loaded (/lib/systemd/system/rsyslog.service; enabled; vendor preset: enabled)
+   Active: active (running) since Fri 2021-04-23 21:28:50 -03; 5min ago
+     Docs: man:rsyslogd(8)
+           https://www.rsyslog.com/doc/
+ Main PID: 31056 (rsyslogd)
+    Tasks: 4 (limit: 4915)
+   Memory: 1.0M
+   CGroup: /system.slice/rsyslog.service
+           └─31056 /usr/sbin/rsyslogd -n -iNONE
+
+Verifique se no Servidor de Logs, foi criado o arquivo de log. 
+Se o arquivo não foi criado é porque algum dos passos acima foi executado de forma errada. Dê uma conferida.
+
+
+-----CGNAT DANOS
+
+Agora faremos a configuração em um servidor de CGNAT DANOS (2001:db8:c0ca:c01a:192:168:0:3). 
+Para isso acesse seu servidor, entre em modo de configuração e execute o comando exemplo alterando para o IP do seu servidor:
+
+set system syslog host '[2001:db8:106::192:168:1:1]:514' facility all level info
+
+
+-----Mikrotik RouterOS
+Por último a configuração de um RouterOS (2001:db8:dead::192:168:200:4). 
+Primeiro vamos no Winbox em System/Logging e na aba Actions vamos criar uma ação do tipo remota. 
+Nela vamos apontar para o IP do Servidor de Logs conforme abaixo:
+{Arq: Mikrotik RouterOS- 1 }
+
+
+Após criarmos a Action, iremos na aba Rules e modificaremos a regra warning, que neste caso, será usada para 
+enviar os logs de IPv6 para o Servidor de Logs:
+
+{Arq: Mikrotik RouterOS- 2 }
+
+Vá no seu profile PPPoE e na aba scripts adicione esses comandos abaixo em On Up:
+{Arq: Mikrotik RouterOS- 3 }
+	:local interfaceName [/interface get $interface name];
+	delay 60;
+	:local PrefixoIPv6 [/ipv6 dhcp-server binding get value-name=address [find server=$interfaceName]];
+	:log warning "$interfaceName $PrefixoIPv6"
+
+Lembre-se de se setar o profile PPPoE na configuração do usuário, ou colocar o script em itálico no profile default.
+
+
+		Configurando o Mikrotik para enviar o log para o servidor syslog
+
+Todo log ocorrido no ambiente do concentrador do tipo "warning" será enviado para o servidor syslog:
+
+	/system logging action add bsd-syslog=yes name=syslog remote=IP_Syslog remote-port=Porta_Syslog syslog-facility=syslog target=remote
+
+	/system logging add topics=warning action=syslog
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

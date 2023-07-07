@@ -1,0 +1,89 @@
+Progeto: Scan por proximidade
+----------------------------------------------
+Consiste na modificação da imagem(TV Box) do TV Box.
+Embarcado com sistema linux basíco.
+
+Por que usar o Tv box?
+A estrutura do Tv Box, trás algumas caracteristicas basícas, entretanto úteis.
+
+Ele possui:
+    Memoria ram 2gb DDR2.
+    Memoria Inter. 8Gb.
+    Processador quadcore arm
+    Porta RJ45
+    Interface Wireless.
+Possui um preço consideravelmente baixo. Muito atrativo!
+Possue um alimentação de ~5V 1.5A. 
+Placa pequena.
+O motivo do uso já foram apresentados.
+----------------------------------------------
+O sistema que irá embarcar, será o Kali ARM ou Ubunto Server ARM.
+
+Será desenvolvido script em shell, para analisar a rede da vitiva. 
+Ou infectar a rede com um virus, que permite o contro.
+
+-----------------------------------------------
+Como irá ocorrer o ataque de proximidade?
+O ataque foi desenvolvido para mercados.
+Mercados de Grade e Médio porte, possuem leitores de codigo de barra, nos coredores. 
+Os leitores necessitem de conexão ao servidor, para realizar consultas.
+
+O ataque consiste na falta de manutenção dos sistemas.
+Um grupo grande de mercados, desprezam a seguraça da rede interna.
+Ex: A rede de mercados Naguma, utiliza o sistema operacional win Xp, nos caixas.
+Não vejo falha, mas palha para o fogo! 
+-----------------------------------------------
+modificações:
+
+1 - preparar o sistema operacional do tv box.
+1.1 - modificar a inicialização do sistema, onde será iniciado scripts de analise de redes/vulnerabilidades. 
+
+2 - modificar o tv box 
+2.1 - alimentação por power banks/ bateria.
+2.2 - retirar a carcaça do equipamento. {Vc deverá isolar a placa! evite Curto-circuito}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++
+A ideia para esse projeto , vem do video: https://www.youtube.com/watch?v=R0zjwQG2iE4
+Onde o apresentador VegaData, instala linux no TV BOX | 

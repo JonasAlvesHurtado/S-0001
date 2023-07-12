@@ -1,0 +1,21 @@
+#!/bin/bash
+#Script to capture USB recognition log.
+#--------------------------------arq
+f1="usb"
+
+moni_log_file=/var/log/syslog
+name_arq=/home/jonas/analise_log/
+name_arq_file1=/home/jonas/analise_log/testelog_cru
+name_arq_file2=/home/jonas/analise_log/testelog
+
+#------------------------------------aplic
+mkdir  -m 700 -p /home/jonas/analise_log/
+
+clear
+echo "*********************************************************************************************************"
+
+cat  $moni_log_file | grep $f1    >  $name_arq_file1
+grep "Debian kernel:" /home/jonas/analise_log/testelog > name_arq_file2
+cat name_arq_file2 |  awk '{ print $1"-"$2  " ["$3"] "$7":  " $9": "$10}'
+
+echo "*********************************************************************************************************"

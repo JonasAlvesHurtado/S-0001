@@ -1,0 +1,125 @@
+#!/bin/bash
+clear
+#Script made to facilitate network maintenance and configuration | free use.
+
+#--------------------info_files_doc
+net_conf="/etc/network/interfaces"
+net_conf_copy="/etc/network/interface_orig"
+reset_network="/etc/init.d/networking restart"
+
+
+
+#---------------------registration function
+nome() { 
+	#necessary--------------------------
+	echo "# This file describes the network interfaces available on your system"
+	echo "# and how to activate them. For more information, see interfaces(5)."
+	echo ""
+	echo "source /etc/network/interfaces.d/*"
+	echo ""
+	echo "# The loopback network interface"
+	echo ""
+	echo "auto lo"
+	#necessary--------------------------
+	
+	#new_text--------------------------
+	echo "iface $Interface_d_rede inet static"
+	echo "addreas $host_ip_addr  "
+	echo "netmask $netmask  "
+	echo "network $network_id  "
+	echo "Broacast $broadcast_id "
+	echo "gateway $gateway "
+	#new_text--------------------------
+ }
+
+
+#----------------------base1 
+
+
+echo "*********************************************************************"
+echo "Backup: $net_conf_copy "
+echo "Modify: $net_conf "
+echo "---------------------------------------"
+
+echo -n "configure the interface?"; read -p " Confirm? ( S / N ) " prompt
+echo      "----------------------------------------------"
+if [[ $prompt == "s" || $prompt == "S" || $prompt == "Sim" || $prompt == "sim" ]]
+
+then	
+
+	cp  -p $net_conf  $net_conf_copy #Backup
+
+
+	echo      "-----------------------------------------"
+	echo -n "network interface: "; read Interface_d_rede     
+	echo -n "Enter the IP: "; read host_ip_addr 
+	echo -n "Enter the Netmask: "; read netmask 
+	echo -n "Network ID: "; read network_id 
+	echo -n "Broadcast: "; read broadcast_id 
+	echo -n "Gateway: "; read gateway 
+	#echo -n "Informe o DNS Serv: "; read dns_serv               
+	echo      "-----------------------------------------"
+	#echo -n "Name Arq.: "; read nome_arq
+	echo      "Generated file"
+	echo      "-----------------------------------------"
+	nome > $net_conf #Generated file.
+
+	echo -n "reset the interface?"; read -p " Confirm? ( S / N ) " prompt
+	echo      "----------------------------------------------"
+
+	if [[ $prompt == "s" || $prompt == "S" || $prompt == "Sim" || $prompt == "sim" ]]
+
+	then
+  		/etc/init.d/networking restart
+  		
+	else
+		 exit
+	fi
+	
+else
+	echo -n
+fi
+
+
+#----------------------base2 - show the changes
+
+
+echo -n "see the changes?"; read -p " Confirm? ( S / N ) " prompt
+echo      "----------------------------------------------"
+
+if [[ $prompt == "s" || $prompt == "S" || $prompt == "Sim" || $prompt == "sim" ]]
+
+then
+  	cat  $net_conf
+else
+	 exit
+fi
+
+echo "*********************************************************************"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

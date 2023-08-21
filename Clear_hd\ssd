@@ -1,0 +1,33 @@
+#!/bin/bash 
+clear 
+
+#Apresentar Um conjusto de algoritmos
+while true $OPS != "teste"
+do
+clear
+echo "╔════════════════╗"
+echo "┃ ▁▂▃▅▆▇ 100%    ┃"
+echo "╚════════════════╝"
+echo -e "SONG: LUCKHAOS - A moderação (edit by @jotatress)\nCREATOR: LUCKHAOS ™®\n0:35 ━❍──────── -3:08 \n↻     ⊲  Ⅱ  ⊳     ↺"
+echo  "=============================== "
+echo -e "\n1) Padrão 5220.22-M \n\n2) Padrão Alemão(VSITR) \n\n3) Algoritmo de Bruce Schneier \n\n4) Algoritmo de Peter Gutmann \n\nx) Sair"
+echo "==============================="
+read -p  "Digite a opção desejada: " OPS
+echo "==============================="
+
+clear_hd() 	{ echo -n  "Etapa 1 - " && dd if=/dev/urandom of=/dev/$name_unid bs=1M && shred -n 2 -z /dev/$name_unid && echo "Finalizado" ;}
+clear_hm() 	{ echo -n "Etapa 2 - " && shred -n 1 /dev/$name_unid && echo "Finalizado" ;}
+clear_fi() 	{ echo -e "\nClear /dev/$name_unid - Finalizado \n********************************************\n" && read -p "Quer Validar o Clear? ( s / n ) " resp_sn  ;[[ $resp_sn = 's' || $resp_sn = 'S' || $resp_sn = ' ' ]] && valid_clear ;}
+loop_for() 	{ for ((cont=1;cont<=$numb;cont++));do echo -e "\n------ Parte $cont" ;for ((loop=1; loop<=2; loop++));do case "$loop" in 1) echo "clear_hd" ;; 2) echo "clear_hm" ;esac ;done ;[[ $cont = $numb ]] && clear_fi ;done; sleep 5 ;}
+list_unid() 	{ clear && echo -e "************ HD/SSD ************** \n$( lsblk -d | grep "sd" | awk '{print $1"  -  "$4"  -  "$6}') \n-------- \nQunt.: $( lsblk -d | awk '{print $1 }' | grep -c "sd")  \n**********************************" && read -p "Name Disk: " name_unid ;}
+valid_clear()	{ echo "Aguarde......" ;foremost  -T -t all  -i /dev/$name_unid  && echo -e "\nQuant: $(  bc <<< " $( ls  out*/ | grep -c "" )   - 1 "  )" && cd out* && echo -e "******************* \n$( ls -R) \n*******************" ;}
+
+    case "$OPS" in
+   		# $numb Serve para controla a uant. de repetições do loop
+	    1) 	list_unid && echo -e "************ Padrão 5220.22-M **************\n"  && numb=2 && loop_for ;;
+		    2)	list_unid && echo -e "************ Padrão Alemão(VSITR) **************\n" && numb=4 && loop_for;;
+			    3)	list_unid && echo -e "************ Algoritmo de Bruce Schneier **************\n" && numb=4 && loop_for ;;   
+				    4)	list_unid && echo -e "************ Algoritmo de Peter Gutmann **************\n" && numb=4 && loop_for ;;
+					    x)	echo "fechando" && sleep 2 && clear && exit   ;; 
+    esac
+done
